@@ -16,7 +16,14 @@ def get_prompt(client, question, query_results):
     for i, result in enumerate(query_results, start=1):
       title = result["title"]
       url = result["url"]
-      paragraph = get_semantically_close_text(question, client)
+
+      response = openai.Embedding.create(
+          input=question,
+          model="text-embedding-ada-002"
+      )
+      custom_vector = response['data'][0]['embedding']
+      
+      paragraph = get_semantically_close_text(client, embedding=custom_vector)
 
       text += f"""
       Document [{i}]: {title}
