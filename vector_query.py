@@ -1,16 +1,16 @@
-def get_semantically_close_text(question, client, model=None):
+def get_semantically_close_text(client, text=None, embedding=None):
     query = (
        client.query
       .get("ServicePublic", ["text", "url", "subdomain", "title"])
     )
 
-    if model:
-        embedding = model.encode(question)
+    if embedding:
         nearVector = {"vector": embedding}
         query = query.with_near_vector(nearVector)
+    elif text:
+       query = query.with_near_text({"concepts": [text]})
     else:
-       query = query.with_near_text({"concepts": [question]})
-       
+      raise ValueError('please provide ethier text or embedding')
 
     query = (
         query
@@ -19,8 +19,6 @@ def get_semantically_close_text(question, client, model=None):
     )
 
     response = query.do()
-
-    print(response)
 
     if 'errors' in response["data"]["Get"].keys() and response["data"]["Get"]['errors'] is not None:
        raise RuntimeError('There is some error in weaviate for this query')
