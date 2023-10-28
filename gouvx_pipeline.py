@@ -1,7 +1,7 @@
 from vector_query import get_semantically_close_text
 import openai
 
-def get_prompt(client, question, query_results):
+def build_prompt(client, question, query_results):
   text = f"""Vous êtes GouvX, un assitant virtuel bienveillant et serviable.
   
   Répondez précisément et clairement à la question en fin de document.
@@ -13,18 +13,10 @@ def get_prompt(client, question, query_results):
   """
 
   if query_results:
-    for i, result in enumerate(query_results, start=1):
+    for i, paragraph in enumerate(query_results, start=1):
       title = result["title"]
       url = result["url"]
-
-      response = openai.Embedding.create(
-          input=question,
-          model="text-embedding-ada-002"
-      )
-      custom_vector = response['data'][0]['embedding']
       
-      paragraph = get_semantically_close_text(client, embedding=custom_vector)
-
       text += f"""
       Document [{i}]: {title}
       {paragraph}
@@ -48,7 +40,7 @@ def query_llm(prompt, history=None):
   })
 
   for chunk in openai.ChatCompletion.create(
-      model="gpt-3.5-turbo",
+      model="gpt-3.5-turbo-16k",
       messages=messages,
       stream=True,
   ):
@@ -59,14 +51,20 @@ def query_llm(prompt, history=None):
 
 def ask_gouvx(question, client, model=None, n_results=1, history=None):
   if not history:
-    response = get_semantically_close_text(question, client=client, model=model)
+    response = openai.Embedding.create(
+        input=question,
+        model="text-embedding-ada-002"
+    )
+    custom_vector = response['data'][0]['embedding']
+    
+    response = get_semantically_close_text(client, embedding=custom_vector)
 
     if response and response["data"]["Get"]["ServicePublic"] is not None:
       query_results = response["data"]["Get"]["ServicePublic"][:n_results]
     else:
       raise ValueError('The weaviate query returned no response')
 
-    prompt = get_prompt(client, question, query_results)
+    prompt = build_prompt(client, question, query_results)
   else:
     query_results = ""
     prompt = question
