@@ -48,7 +48,7 @@ def ask():
 
     print("question", question)
     try:
-        prompt, query_results, chatgpt_generator = ask_gouvx(question, client=client, model=None, n_results=1, history=history)
+        prompt, query_results, chatgpt_generator = ask_gouvx(question, client=client, model=None, n_results=3, history=history)
     except ValueError:
         query_results = None
         chatgpt_generator = (lambda _: "Désolé j'ai atteint mon quota de réponses pour le moment")("")
