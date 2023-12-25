@@ -60,20 +60,12 @@ def query_llm(prompt, system_prompt=None, history=None):
           yield(content)
 
 
-def ask_gouvx(prompt, client, model=None, n_results=1, history=None):
+def ask_gouvx(prompt, client, model=None, n_results=1, history=None, sources=None):
   if history:
     query_results = ""
     system_prompt = build_system_prompt(None)
   else:
-    """response = openai.Embedding.create(
-        input=question,
-        model="text-embedding-ada-002"
-    )
-    custom_vector = response['data'][0]['embedding']
-    response = get_semantically_close_text(client, embedding=custom_vector)
-    """
-
-    response = get_semantically_close_text(client, text=prompt)
+    response = get_semantically_close_text(client, text=prompt, sources=sources)
 
     if response and response["data"]["Get"]["ServicePublic"] is not None:
         query_results = response["data"]["Get"]["ServicePublic"][:n_results]
@@ -81,7 +73,6 @@ def ask_gouvx(prompt, client, model=None, n_results=1, history=None):
       raise ValueError('The weaviate query returned no response')
 
     system_prompt = build_system_prompt(query_results)
-
 
   chatgpt_generator = query_llm(prompt, system_prompt=system_prompt, history=history)
 

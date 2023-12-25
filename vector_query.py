@@ -1,26 +1,31 @@
-def get_semantically_close_text(client, text=None, embedding=None):
-    query = (
-       client.query
-      .get("ServicePublic", ["text", "url", "subdomain", "title"])
-    )
+def get_semantically_close_text(client, text=None, embedding=None, sources=None):
+  if sources is None:
+      sources = ["ServicePublic"]
+  
+  #TODO search in multiple sources
 
-    if embedding:
-        nearVector = {"vector": embedding}
-        query = query.with_near_vector(nearVector)
-    elif text:
-       query = query.with_near_text({"concepts": [text]})
-    else:
-      raise ValueError('please provide ethier text or embedding')
+  query = (
+      client.query
+    .get(sources[0], ["text", "url", "subdomain", "title"])
+  )
 
-    query = (
-        query
-        .with_limit(10)
-        .with_additional(['certainty'])
-    )
+  if embedding:
+      nearVector = {"vector": embedding}
+      query = query.with_near_vector(nearVector)
+  elif text:
+      query = query.with_near_text({"concepts": [text]})
+  else:
+    raise ValueError('please provide ethier text or embedding')
 
-    response = query.do()
+  query = (
+      query
+      .with_limit(10)
+      .with_additional(['certainty'])
+  )
 
-    if 'errors' in response["data"]["Get"].keys() and response["data"]["Get"]['errors'] is not None:
-       raise RuntimeError('There is some error in weaviate for this query')
+  response = query.do()
 
-    return response
+  if 'errors' in response["data"]["Get"].keys() and response["data"]["Get"]['errors'] is not None:
+      raise RuntimeError('There is some error in weaviate for this query')
+
+  return response

@@ -43,17 +43,18 @@ def main():
 
 @app.route('/ask/', methods=['POST'])
 def ask():
-    prompt = request.form['q']
+    prompt = request.form['question']
+    sources = request.form['sources']
+    history = request.form['history']
 
-    history = request.form['h']
     history = json.loads(history)
 
-    print("user:", request.remote_addr, "prompt:", prompt)
+    print("user:", request.remote_addr, "prompt:", prompt, "sources:", sources)
 
     try:
         if len(history) > 10:
             raise ValueError("conversation too long")
-        query_results, chatgpt_generator = ask_gouvx(prompt, client=client, model=None, n_results=WEAVIATE_NRESULTS, history=history)
+        query_results, chatgpt_generator = ask_gouvx(prompt, client=client, model=None, n_results=WEAVIATE_NRESULTS, history=history, sources=sources)
     except ValueError:
         query_results = None
         chatgpt_generator = (lambda _: "Désolé j'ai atteint mon quota de réponses pour le moment")("")
