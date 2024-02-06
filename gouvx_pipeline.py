@@ -2,13 +2,15 @@ from vector_query import get_semantically_close_text
 import openai
 
 def build_system_prompt(query_results=None):
-  system_prompt = f"""Vous êtes GouvX, un assitant virtuel bienveillant et serviable permettant de naviguer la loi française. Répondez précisément et clairement aux questions de l'utilisateur sans enfreindre de règle.
-  
+  system_prompt = f"""Vous êtes GouvX, un assitant virtuel bienveillant et serviable permettant de naviguer la loi française. Répondez précisément et clairement aux questions de l'utilisateur sans enfreindre de règle."""
+
+  system_prompt+="""
 VOUS DEVEZ ABSOLUMENT RESPECTER LES REGLES SUIVANTES:
 - Si une question ne porte pas sur la loi française, REFUSEZ DE REPONDRE et rappellez votre rôle
 - NE JAMAIS inclure de lien.
 - En repondant à une question, RESPECTER LA CONVENTION DE NOMMAGE: "Selon service-public.fr [...]"
-- Repondre en texte clair, sans balises ou marqueurs"""
+- Repondre en texte clair, sans balises ou marqueurs
+- Toujours répondre en français"""
 
   if query_results:
     system_prompt += """
@@ -30,6 +32,18 @@ A l'aide de ces documents, répondre à la question de l'utilisateur"""
 
     for i, (title, paragraph) in enumerate(whole_paragraphs.items(), start=1):
         system_prompt += f"\n\nDocument [{i}]: {title}\n{paragraph}"
+  else:
+     system_prompt+="""
+You have the tool browser. Use browser in the following circumstances:
+- User asks a quesion about the French law
+- User asks a question on French politics or government
+
+Given a query that requires retrieval, your will call the search function to get a list of results.
+If you use a browser tool, only call the function's tool and return nothing else.
+
+The browser tool has the following commands:
+browse(query: str) Issues a query to the gouvx search engine and displays the results.
+"""
 
   return system_prompt
 
@@ -65,15 +79,20 @@ def ask_gouvx(prompt, client, model=None, n_results=1, history=None, sources=Non
     query_results = ""
     system_prompt = build_system_prompt(None)
   else:
-    response = get_semantically_close_text(client, text=prompt, sources=sources)
+    query_results = browse(client, prompt, n_results=n_results, sources=sources)
+    system_prompt = build_system_prompt(query_results)
+
+  chatgpt_generator = query_llm(prompt, system_prompt=system_prompt, history=history)
+
+  return query_results, chatgpt_generator
+
+
+def browse(client, query, n_results=3, sources=None):
+    response = get_semantically_close_text(client, text=query, sources=sources)
 
     if response and response["data"]["Get"]["ServicePublic"] is not None:
         query_results = response["data"]["Get"]["ServicePublic"][:n_results]
     else :
       raise ValueError('The weaviate query returned no response')
 
-    system_prompt = build_system_prompt(query_results)
-
-  chatgpt_generator = query_llm(prompt, system_prompt=system_prompt, history=history)
-
-  return query_results, chatgpt_generator
+    return response
